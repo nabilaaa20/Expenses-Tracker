@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="corporate"> <!-- Tema corporate dipertahankan sesuai permintaan Anda -->
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - Expense Tracker</title>
+
+    <!-- Pastikan Tailwind CSS dimuat sebelum DaisyUI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Update DaisyUI CDN ke versi terbaru untuk konsistensi -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.2/dist/full.css" rel="stylesheet" type="text/css" />
+
+    <!-- Skrip login Anda -->
+    <script src="login.js" defer></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif; /* Menggunakan font Inter untuk konsistensi */
+            background-color: #f3f4f6; /* Warna latar belakang yang lebih lembut, bisa disesuaikan dengan tema corporate */
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center bg-base-200">
+
+    <div class="card w-full max-w-sm shadow-2xl bg-base-100 rounded-lg"> <!-- Tambahkan rounded-lg -->
+        <div class="card-body">
+            <h2 class="text-center text-3xl font-bold text-primary mb-6">Login</h2> <!-- Ukuran font dan margin disesuaikan -->
+            <form id="loginForm" class="space-y-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Username</span>
+                    </label>
+                    <input type="text" id="username" class="input input-bordered w-full rounded-lg" placeholder="Masukkan username" required /> <!-- Tambahkan w-full dan rounded-lg -->
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Password</span>
+                    </label>
+                    <input type="password" id="password" class="input input-bordered w-full rounded-lg" placeholder="Masukkan password" required /> <!-- Tambahkan w-full dan rounded-lg -->
+                </div>
+                <div class="form-control mt-6">
+                    <button type="submit" class="btn btn-primary w-full rounded-lg">Login</button> <!-- Tambahkan rounded-lg -->
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal untuk alert kustom (sama seperti di main.js dan riwayat.html) -->
+    <dialog id="custom_alert_modal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg text-primary">Informasi</h3>
+            <p id="alert_message" class="py-4"></p>
+            <div class="modal-action">
+                <form method="dialog">
+                    <button class="btn btn-primary rounded-lg">Oke</button>
+                </form>
+            </div>
+        </div>
+    </dialog>
+
+    <script>
+        // Inisialisasi modal alert setelah DOM dimuat
+        document.addEventListener('DOMContentLoaded', () => {
+            const customAlertDialog = document.getElementById('custom_alert_modal');
+            // Fungsi helper untuk menampilkan alert kustom
+            window.showCustomAlert = (message) => {
+                if (customAlertDialog) {
+                    document.getElementById('alert_message').textContent = message;
+                    customAlertDialog.showModal();
+                } else {
+                    alert(message); // Fallback jika modal tidak ditemukan
+                }
+            };
+        });
+    </script>
+</body>
+</html>

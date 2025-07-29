@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light"> <!-- Tambahkan data-theme="light" untuk tema default DaisyUI -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker</title>
+
+    <!-- Pastikan Tailwind CSS dimuat sebelum DaisyUI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.2/dist/full.css" rel="stylesheet" type="text/css" />
+
+    <!-- Skrip aplikasi Anda -->
+    <script src="main.js" defer></script>
+    <!-- Skrip untuk ekspor Excel dan Chart.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* Custom styles for better aesthetics and responsiveness */
+        body {
+            font-family: 'Inter', sans-serif; /* Menggunakan font Inter */
+            background-color: #f3f4f6; /* Warna latar belakang yang lebih lembut */
+        }
+        .container-center {
+            max-width: 960px; /* Lebar maksimum kontainer utama */
+            margin: 2.5rem auto; /* Margin atas/bawah dan tengah otomatis */
+            padding: 1.5rem; /* Padding di dalam kontainer */
+        }
+        /* Responsiveness for smaller screens */
+        @media (max-width: 768px) {
+            .container-center {
+                margin: 1rem auto;
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <script>
+        // Memastikan pengguna sudah login
+        if (localStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.href = 'login.html';
+        }
+    </script>
+
+    <!-- Navbar (Header) -->
+    <div class="navbar bg-base-100 shadow-md rounded-b-lg">
+        <div class="flex-1">
+            <h1 class="text-3xl font-bold text-primary ml-4">Expense Tracker</h1>
+        </div>
+        <div class="flex-none">
+            <button onclick="logout()" class="btn btn-ghost btn-circle tooltip tooltip-bottom" data-tip="Logout">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-base-content" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Kontainer Utama Aplikasi -->
+    <div class="container-center bg-white shadow-xl rounded-lg">
+        <!-- Judul Form -->
+        <h2 class="text-3xl font-bold text-center mb-6 text-secondary">Tambah Pengeluaran Baru</h2>
+
+        <!-- Form Tambah Pengeluaran -->
+        <form id="expenseForm" class="grid md:grid-cols-2 gap-4 mb-6">
+            <label class="form-control w-full">
+                <div class="label">
+                    <span class="label-text">Deskripsi Pengeluaran</span>
+                </div>
+                <input type="text" id="description" placeholder="Misal: Bensin, Belanja Mingguan" required class="input input-bordered w-full rounded-lg" />
+            </label>
+
+            <label class="form-control w-full">
+                <div class="label">
+                    <span class="label-text">Jumlah (Rp)</span>
+                </div>
+                <input type="number" id="amount" placeholder="Misal: 50000" required class="input input-bordered w-full rounded-lg" />
+            </label>
+
+            <label class="form-control w-full">
+                <div class="label">
+                    <span class="label-text">Tanggal</span>
+                </div>
+                <input type="date" id="date" required class="input input-bordered w-full rounded-lg" />
+            </label>
+
+            <label class="form-control w-full">
+                <div class="label">
+                    <span class="label-text">Kategori</span>
+                </div>
+                <input type="text" id="category" placeholder="Misal: Transportasi, Makanan" required class="input input-bordered w-full rounded-lg" />
+            </label>
+
+            <input type="hidden" id="editIndex">
+            <button type="submit" id="submitBtn" class="btn btn-primary md:col-span-2 rounded-lg">
+                Tambah Pengeluaran
+            </button>
+        </form>
+
+        <!-- Daftar Pengeluaran (akan diisi oleh JS) -->
+        <div class="divider">Daftar Pengeluaran Terakhir</div>
+        <ul id="expensesList" class="space-y-3">
+            <!-- Contoh item pengeluaran (akan di-render oleh JS) -->
+            <!--
+            <li class="flex justify-between items-center bg-base-200 p-4 rounded-lg shadow-sm">
+                <div>
+                    <p class="font-semibold text-lg">Bensin</p>
+                    <p class="text-sm text-gray-500">2025-07-24 • Transportasi</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="font-bold text-success">Rp20.000</span>
+                    <button class="btn btn-sm btn-warning">Edit</button>
+                    <button class="btn btn-sm btn-error">Hapus</button>
+                </div>
+            </li>
+            -->
+        </ul>
+
+        <div class="text-center mt-6">
+            <a href="riwayat.html" class="link link-hover text-lg font-semibold text-info">
+                Lihat Semua Riwayat &rarr;
+            </a>
+        </div>
+
+        <!-- Total Pengeluaran -->
+        <div class="card bg-info text-info-content mt-8 shadow-md rounded-lg">
+            <div class="card-body text-center">
+                <h2 class="card-title justify-center text-2xl">Total Seluruh Pengeluaran</h2>
+                <span id="totalAmount" class="text-4xl font-extrabold">Rp0</span>
+            </div>
+        </div>
+
+        <!-- Rincian Kategori -->
+        <div class="mt-8">
+            <h2 class="text-xl font-bold mb-4 text-base-content">Rincian Kategori</h2>
+            <ul id="categoryBreakdown" class="space-y-2 text-base-content">
+                <!-- Akan diisi oleh JS -->
+            </ul>
+        </div>
+
+        <!-- Visualisasi Kategori (Chart) -->
+        <div class="mt-8">
+            <h2 class="text-xl font-bold mb-4 text-base-content">Visualisasi Kategori</h2>
+            <div class="p-4 border border-base-300 rounded-lg bg-base-100 shadow-sm">
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Tombol Export to Excel -->
+        <div class="text-center mt-8">
+            <button onclick="exportToExcel()" class="btn btn-success rounded-lg">
+                Export ke Excel
+            </button>
+        </div>
+
+    </div> <!-- End of container-center -->
+
+</body>
+</html>

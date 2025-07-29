@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riwayat Pengeluaran - Expense Tracker</title>
+
+    <!-- Pastikan Tailwind CSS dimuat sebelum DaisyUI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.2/dist/full.css" rel="stylesheet" type="text/css" />
+
+    <!-- Skrip untuk ekspor Excel (jika diperlukan di sini) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+
+    <!-- Skrip utama aplikasi (jika ada fungsi yang digunakan bersama) -->
+    <!-- Catatan: Jika main.js hanya untuk index.html, mungkin perlu file JS terpisah untuk riwayat.html -->
+    <!-- Untuk saat ini, saya asumsikan fungsi deleteExpense, sortByDate, sortByCategory ada di sini atau di file terpisah -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .container-center {
+            max-width: 960px;
+            margin: 2.5rem auto;
+            padding: 1.5rem;
+        }
+        @media (max-width: 768px) {
+            .container-center {
+                margin: 1rem auto;
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 font-sans">
+    <script>
+        // Memastikan pengguna sudah login
+        if (localStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.href = 'login.html';
+        }
+    </script>
+
+    <!-- Navbar (Header) -->
+    <div class="navbar bg-base-100 shadow-md rounded-b-lg">
+        <div class="flex-1">
+            <h1 class="text-3xl font-bold text-primary ml-4">Riwayat Pengeluaran</h1>
+        </div>
+        <div class="flex-none">
+            <a href="index.html" class="btn btn-ghost btn-circle tooltip tooltip-bottom" data-tip="Kembali ke Dashboard">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-base-content" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+                </svg>
+            </a>
+        </div>
+    </div>
+
+    <!-- Kontainer Utama Aplikasi -->
+    <div class="container-center bg-white shadow-xl rounded-lg">
+        <h2 class="text-3xl font-bold text-center mb-6 text-secondary">Semua Riwayat Pengeluaran</h2>
+
+        <!-- Tombol Urutkan -->
+        <div class="flex flex-wrap gap-3 mb-6 justify-center">
+            <button onclick="sortByDate()" class="btn btn-outline btn-info rounded-lg">Urutkan per Tanggal (Terlama)</button>
+            <button onclick="sortByCategory()" class="btn btn-outline btn-info rounded-lg">Urutkan per Kategori (A-Z)</button>
+            <button onclick="exportToExcel()" class="btn btn-success rounded-lg">Export ke Excel</button>
+        </div>
+
+        <!-- Tabel Pengeluaran -->
+        <div class="overflow-x-auto">
+            <table class="table table-zebra w-full rounded-lg shadow-md">
+                <!-- head -->
+                <thead>
+                    <tr>
+                        <th class="px-6 py-3">No</th>
+                        <th class="px-6 py-3">Deskripsi</th>
+                        <th class="px-6 py-3">Jumlah</th>
+                        <th class="px-6 py-3">Tanggal</th>
+                        <th class="px-6 py-3">Kategori</th>
+                        <th class="px-6 py-3 text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="expensesTableBody">
+                    <!-- Data akan diisi oleh JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Total Keseluruhan -->
+        <div class="card bg-info text-info-content mt-8 shadow-md rounded-lg">
+            <div class="card-body text-center">
+                <h2 class="card-title justify-center text-2xl">Total Keseluruhan Pengeluaran</h2>
+                <span id="totalAmount" class="text-4xl font-extrabold">Rp0</span>
+            </div>
+        </div>
+    </div> <!-- End of container-center -->
+
+    <!-- Modal untuk konfirmasi kustom (sama seperti di main.js) -->
+    <dialog id="custom_confirm_modal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg text-warning">Konfirmasi</h3>
+            <p id="confirm_message" class="py-4"></p>
+            <div class="modal-action">
+                <form method="dialog" class="flex gap-2">
+                    <button id="confirm_yes_button" class="btn btn-error rounded-lg">Ya</button>
+                    <button class="btn btn-ghost rounded-lg">Tidak</button>
+                </form>
+            </div>
+        </div>
+    </dialog>
+
+    <script>
+        let expenses = []; // Deklarasi variabel expenses
+        let customConfirmDialog; // Deklarasi variabel modal
+
+        window.onload = () => {
+            // Inisialisasi modal setelah DOM dimuat
+            customConfirmDialog = document.getElementById('custom_confirm_modal');
+            loadAndRenderExpenses();
+        };
+
+        /**
+         * Memuat data pengeluaran dari localStorage dan merender semua data ke tabel.
+         */
+        function loadAndRenderExpenses() {
+            expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+            renderExpensesTable();
+            updateTotal();
+        }
+
+        /**
+         * Merender semua pengeluaran ke dalam tabel.
+         * Menggunakan kelas DaisyUI untuk styling tabel.
+         */
+        function renderExpensesTable() {
+            const tableBody = document.getElementById('expensesTableBody');
+            tableBody.innerHTML = '';
+
+            if (expenses.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-base-content">Tidak ada riwayat pengeluaran.</td></tr>`;
+                return;
+            }
+
+            expenses.forEach((expense, index) => {
+                const tr = document.createElement('tr');
+                // Kelas DaisyUI untuk baris tabel
+                tr.className = 'hover:bg-base-200'; // Menambahkan efek hover
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-medium text-base-content">${index + 1}</td>
+                    <td class="px-6 py-4 text-base-content">${expense.description}</td>
+                    <td class="px-6 py-4 text-base-content">Rp${expense.amount.toLocaleString('id-ID')}</td>
+                    <td class="px-6 py-4 text-base-content">${expense.date}</td>
+                    <td class="px-6 py-4 text-base-content">${expense.category}</td>
+                    <td class="px-6 py-4 text-center">
+                        <button class="btn btn-sm btn-error rounded-lg" onclick="showConfirmDelete(${index})">Hapus</button>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        /**
+         * Menampilkan modal konfirmasi sebelum menghapus pengeluaran.
+         * @param {number} index - Indeks pengeluaran yang akan dihapus.
+         */
+        function showConfirmDelete(index) {
+            document.getElementById('confirm_message').textContent = 'Yakin ingin menghapus pengeluaran ini secara permanen?';
+            document.getElementById('confirm_yes_button').onclick = () => {
+                customConfirmDialog.close();
+                deleteExpense(index);
+            };
+            customConfirmDialog.showModal();
+        }
+
+        /**
+         * Menghapus pengeluaran dari array dan localStorage, lalu memuat ulang tampilan.
+         * @param {number} index - Indeks pengeluaran yang akan dihapus.
+         */
+        function deleteExpense(index) {
+            expenses.splice(index, 1);
+            localStorage.setItem('expenses', JSON.stringify(expenses)); // Simpan perubahan
+            loadAndRenderExpenses(); // Muat ulang data dan render tabel
+        }
+
+        /**
+         * Menghitung dan menampilkan total keseluruhan pengeluaran.
+         */
+        function updateTotal() {
+            const total = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+            document.getElementById('totalAmount').textContent = `Rp${total.toLocaleString('id-ID')}`;
+        }
+
+        /**
+         * Mengurutkan pengeluaran berdasarkan tanggal (terlama ke terbaru).
+         */
+        function sortByDate() {
+            expenses.sort((a, b) => {
+                return new Date(a.date) - new Date(b.date);
+            });
+            renderExpensesTable();
+        }
+
+        /**
+         * Mengurutkan pengeluaran berdasarkan kategori (A-Z).
+         */
+        function sortByCategory() {
+            expenses.sort((a, b) => {
+                return a.category.localeCompare(b.category);
+            });
+            renderExpensesTable();
+        }
+
+        /**
+         * Mengekspor data pengeluaran ke file Excel.
+         */
+        function exportToExcel() {
+            const dataToExport = expenses;
+
+            if (dataToExport.length === 0) {
+                // Menggunakan alert kustom jika tidak ada data
+                const customAlertDialog = document.getElementById('custom_alert_modal');
+                if (customAlertDialog) {
+                    document.getElementById('alert_message').textContent = "Tidak ada data untuk diekspor!";
+                    customAlertDialog.showModal();
+                } else {
+                    alert("Tidak ada data untuk diekspor!"); // Fallback jika modal tidak ada
+                }
+                return;
+            }
+
+            const formattedData = dataToExport.map(expense => ({
+                "Deskripsi": expense.description,
+                "Jumlah (Rp)": expense.amount,
+                "Tanggal": expense.date,
+                "Kategori": expense.category
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(formattedData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Riwayat Pengeluaran");
+            worksheet["!cols"] = [{ wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 20 }];
+            XLSX.writeFile(workbook, `Riwayat_Pengeluaran_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        }
+
+        // --- Tambahkan Modal Alert Kustom (jika belum ada di index.html atau main.js) ---
+        // Ini penting jika fungsi exportToExcel di halaman riwayat ini memanggil alert.
+        // Jika Anda sudah menambahkan modal alert di index.html dan main.js,
+        // dan main.js dimuat di sini, maka ini mungkin tidak perlu.
+        // Namun, untuk memastikan, saya tambahkan di sini juga.
+        document.addEventListener('DOMContentLoaded', () => {
+            const body = document.body;
+            if (!document.getElementById('custom_alert_modal')) { // Hindari duplikasi jika sudah ada
+                const customAlertModalHTML = `
+                    <dialog id="custom_alert_modal" class="modal">
+                        <div class="modal-box">
+                            <h3 class="font-bold text-lg text-primary">Informasi</h3>
+                            <p id="alert_message" class="py-4"></p>
+                            <div class="modal-action">
+                                <form method="dialog">
+                                    <button class="btn btn-primary rounded-lg">Oke</button>
+                                </form>
+                            </div>
+                        </div>
+                    </dialog>
+                `;
+                body.insertAdjacentHTML('beforeend', customAlertModalHTML);
+            }
+        });
+    </script>
+</body>
+</html>
